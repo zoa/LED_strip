@@ -27,11 +27,11 @@ void LED_strip::set_all_dark()
 
 void LED_strip::set_bar_graph( byte level )
 {
-    strip_colors[0] = 0x0000FF * (level > 0);
-    strip_colors[1] = 0xFF0000 * (level > 1);
-    strip_colors[2] = 0xFFFF00 * (level > 2);
-    strip_colors[3] = 0x44FF00 * (level > 3);
-    strip_colors[4] = 0x00FF00 * (level > 4);
+    strip_colors[0] = 0x0006FF * (level > 0);
+    strip_colors[1] = 0x0000FF * (level > 1);
+    strip_colors[2] = 0x0F00FF * (level > 2);
+    strip_colors[3] = 0x6600FF * (level > 3);
+    strip_colors[4] = 0xFF00CF * (level > 4);
 }
 
 //-----------------------------------------------------
