@@ -21,9 +21,11 @@ Audio_monitor::Audio_monitor()
   memset(amplitudes, 0, sizeof(amplitudes));
   memset(recent_mean_amplitudes, 0, sizeof(recent_mean_amplitudes));
   
+#ifdef AUDIO_INTERNAL_INTERRUPT
   /// Configure and start the interrupt that will call update_amplitude every SAMPLE_INTERVAL ms
   MsTimer2::set(SAMPLE_INTERVAL, &update_amplitude );
   MsTimer2::start();
+#endif
 }
 
 //-----------------------------------------------------

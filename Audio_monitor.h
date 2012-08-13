@@ -4,14 +4,21 @@
 #include "Arduino.h"
 
 
+/// If this is defined, the class will configure its own interrupt timer.
+/// If not, some external interrupt timer needs to call its update_amplitude()
+/// method manually. This is because the MsTimer2 library only supports one
+/// interrupt at a time (and we have no time to switch libraries).
+//#define AUDIO_INTERNAL_INTERRUPT
+
+
 /// Singleton class that performs interrupt-driven sampling of the amplitude inputs from
 /// a Shifty VU and maintains a running average. Also stores a buffer of recent average amplitudes
 /// and reports whether it's anomolously loud relative to the variance of the recent averages.
 class Audio_monitor
 {
 public:
-  static const byte SAMPLE_INTERVAL = 1; // milliseconds
-  static const unsigned int MAX_AMPLITUDE = 1023; //don't change this (for now anyway)
+  static const byte SAMPLE_INTERVAL = 30; // milliseconds
+  static const unsigned int MAX_AMPLITUDE = 1023; //the empirically measured max possible mic reading
   static const float SENSITIVITY_MULTIPLIER = 1; //inputs get multiplied by this
   
   /// minimum ms between true return values of is_anomolously_loud(). should be a multiple
@@ -23,6 +30,9 @@ public:
   
   /// Returns the average of the last AMP_SIZE amplitude measurements
   int get_amplitude() const;
+  
+  /// Same as above but in the [0,1] range
+  float get_amplitude_float() const { return (float)get_amplitude()/MAX_AMPLITUDE; }
 
   /// Returns the average of the last AMP_SIZE averages of the amplitude array
   /// (so timescale is AMP_SIZE^2)
@@ -40,8 +50,11 @@ public:
   /// calling this.
   void test( bool verbose, bool reallyverbose=false );
   
+  /// Interrupt callback (has to be static)
+  static void update_amplitude();
+  
 private:
-  static const unsigned int AMP_SIZE = 100;
+  static const unsigned int AMP_SIZE = 50;
   static const byte clockpin = 13;
   static const byte enablepin = 10;
   static const byte latchpin = 9;
@@ -75,9 +88,6 @@ private:
 
   /// Called by update_amplitude
   void update( unsigned int latest_value );
-  
-  /// Interrupt callback (has to be static)
-  static void update_amplitude();
 };
 
 
