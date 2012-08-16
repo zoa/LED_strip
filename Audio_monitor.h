@@ -8,7 +8,7 @@
 /// If not, some external interrupt timer needs to call its update_amplitude()
 /// method manually. This is because the MsTimer2 library only supports one
 /// interrupt at a time (and we have no time to switch libraries).
-#define AUDIO_INTERNAL_INTERRUPT
+//#define AUDIO_INTERNAL_INTERRUPT
 
 
 /// Singleton class that performs interrupt-driven sampling of the amplitude inputs from
@@ -19,7 +19,7 @@ class Audio_monitor
 public:
   static const byte SAMPLE_INTERVAL = 30; // milliseconds
   static const uint16_t MAX_AMPLITUDE = 720; //the empirically measured max possible mic reading
-  static const float SENSITIVITY_MULTIPLIER = 1; //inputs get multiplied by this
+  static const float SENSITIVITY_MULTIPLIER = 1.25; //inputs get multiplied by this
   
   /// minimum ms between true return values of is_anomolously_loud(). should be a multiple
   /// of sample_interval.
@@ -54,7 +54,7 @@ public:
   static void update_amplitude();
   
 private:
-  static const uint16_t SAMPLES = 20;
+  static const uint16_t SAMPLES = 5;
   static const uint16_t SAMPLE_MEANS = 50;
   static const byte clockpin = 13;
   static const byte enablepin = 10;

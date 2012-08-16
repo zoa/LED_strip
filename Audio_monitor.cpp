@@ -90,13 +90,13 @@ void Audio_monitor::update( uint16_t latest_value )
         initializing = false;
       }
       // Calculate standard deviation - slowest part
-      long sum = 0;
+      long sum_of_squares = 0;
       int mean = get_recent_amplitude_mean();
       for ( byte i = 0; i < SAMPLE_MEANS; ++i )
       {
-        sum += pow( (int)recent_mean_amplitudes[i] - mean, 2 );
+        sum_of_squares += pow( (int)recent_mean_amplitudes[i] - mean, 2 );
       }
-      stdev = sqrt( sum / (SAMPLE_MEANS - 1) );
+      stdev = sqrt( sum_of_squares / (SAMPLE_MEANS - 1) );
     }
     if ( debounce_counter > 0 )
     {
@@ -142,7 +142,7 @@ bool Audio_monitor::is_anomolously_loud()
 {
   /// samples 3 standard deviations above mean should only occur ~.1% of the time if the
   /// amplitudes are normally distributed
-  bool rval = !initializing && !debounce_counter && ( get_amplitude() > get_recent_amplitude_mean() + stdev*3 );
+  bool rval = !initializing && !debounce_counter && ( get_amplitude() > get_recent_amplitude_mean() + stdev*2 );
   if ( rval )
   {
     debounce_counter = DEBOUNCE_INTERVAL / SAMPLE_INTERVAL;
