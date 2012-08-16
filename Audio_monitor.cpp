@@ -6,7 +6,7 @@
 Audio_monitor Audio_monitor::singleton = Audio_monitor();
 
 Audio_monitor::Audio_monitor()
-: amp_cnt(0), sum(0), mean_amp_cnt(0), mean_sum(0), initializing(true), stdev(0), lock(false), serial_debug(false)//, amp(0), last_reading(0)
+: amp_cnt(0), sum(0), mean_amp_cnt(0), mean_sum(0), initializing(true), stdev(0), lock(false), serial_debug(false)
 {
   // for Shifty
   pinMode(datapin, OUTPUT);
@@ -16,9 +16,8 @@ Audio_monitor::Audio_monitor()
   SPCR = (1<<SPE)|(1<<MSTR)|(0<<SPR1)|(1<<SPR0);
   digitalWrite(latchpin, LOW);
   digitalWrite(enablepin, LOW);
-  analogReference(INTERNAL);
+  //analogReference(INTERNAL);
 
-  memset(amplitudes, 0, sizeof(amplitudes));
   memset(recent_mean_amplitudes, 0, sizeof(recent_mean_amplitudes));
   
 #ifdef AUDIO_INTERNAL_INTERRUPT
@@ -32,7 +31,9 @@ Audio_monitor::Audio_monitor()
 
 Audio_monitor::~Audio_monitor()
 {
+#ifdef AUDIO_INTERNAL_INTERRUPT
   MsTimer2::stop();
+#endif
 }
 
 //-----------------------------------------------------
@@ -46,7 +47,7 @@ Audio_monitor& Audio_monitor::instance()
 
 int Audio_monitor::get_amplitude() const
 {
-  unsigned int amp = round( sum / AMP_SIZE );
+  uint16_t amp = round( (sum / SAMPLES) );
   if ( serial_debug )
   {
     //Serial.println( amp );
@@ -58,7 +59,7 @@ int Audio_monitor::get_amplitude() const
 
 int Audio_monitor::get_recent_amplitude_mean() const
 {
-  return initializing ? round( mean_sum / (mean_amp_cnt+1) ) : round( mean_sum / AMP_SIZE );
+  return initializing ? round( mean_sum / (mean_amp_cnt+1) ) : round( mean_sum / SAMPLE_MEANS );
 }
 
 //-----------------------------------------------------
@@ -70,7 +71,7 @@ int Audio_monitor::get_amplitude_level( byte bins ) const
 
 //-----------------------------------------------------
 
-void Audio_monitor::update( unsigned int latest_value )
+void Audio_monitor::update( uint16_t latest_value )
 {
   // need to keep this fast to ensure it doesn't miss samples. currently it isn't
   // missing any with 1ms sampling rate.
@@ -78,22 +79,24 @@ void Audio_monitor::update( unsigned int latest_value )
   {
     lock = true;
     latest_value > MAX_AMPLITUDE ? MAX_AMPLITUDE : latest_value;
-    update_array_and_sum( amplitudes, AMP_SIZE, sum, amp_cnt, latest_value );
-    if ( amp_cnt == AMP_SIZE-1 )
+    sum -= sum/SAMPLES;
+    sum += latest_value;
+    amp_cnt = ++amp_cnt % SAMPLES;
+    if ( amp_cnt == SAMPLES-1 )
     {
-      update_array_and_sum( recent_mean_amplitudes, AMP_SIZE, mean_sum, mean_amp_cnt, get_amplitude() );
-      if ( mean_amp_cnt == AMP_SIZE-1 && initializing )
+      update_array_and_sum( recent_mean_amplitudes, SAMPLE_MEANS, mean_sum, mean_amp_cnt, get_amplitude() );
+      if ( mean_amp_cnt == SAMPLE_MEANS-1 && initializing )
       {
         initializing = false;
       }
       // Calculate standard deviation - slowest part
       long sum = 0;
       int mean = get_recent_amplitude_mean();
-      for ( byte i = 0; i < AMP_SIZE; ++i )
+      for ( byte i = 0; i < SAMPLE_MEANS; ++i )
       {
         sum += pow( (int)recent_mean_amplitudes[i] - mean, 2 );
       }
-      stdev = sqrt( sum / (AMP_SIZE - 1) );
+      stdev = sqrt( sum / (SAMPLE_MEANS - 1) );
     }
     if ( debounce_counter > 0 )
     {
@@ -112,7 +115,7 @@ void Audio_monitor::update( unsigned int latest_value )
 
 //-----------------------------------------------------
 
-void Audio_monitor::update_array_and_sum( unsigned int array[], const unsigned int array_size, long& sum, byte& counter, unsigned int new_value )
+void Audio_monitor::update_array_and_sum( uint16_t array[], const uint16_t array_size, long& sum, byte& counter, uint16_t new_value )
 {
   /// Store the latest value in the array and also update the sum
   /// so that we don't have to recalculate it every time we want to calc the average
@@ -155,7 +158,8 @@ void Audio_monitor::test( bool verbose, bool reallyverbose )
   if ( verbose )
   {
     if ( amp_cnt > 0 ) {
-    Serial.print( "Most recent value in amplitudes array: " + String(amplitudes[amp_cnt-1]) + ", avg=" + String(get_amplitude()) + ", cnt=" + String(amp_cnt) + "\n" ); }
+    Serial.print( "Most recent average amplitude: " + String(get_amplitude()) + ", cnt=" + String(amp_cnt) + "\n" ); 
+    }
     if ( mean_amp_cnt > 0 ) {
     Serial.print( "Most recent value in mean amplitudes array: " + String(recent_mean_amplitudes[mean_amp_cnt-1]) + ", avg=" + String(get_recent_amplitude_mean()) + ", stdev=" + String(stdev) + ", cnt=" + String(mean_amp_cnt) + "\n" ); }
   }

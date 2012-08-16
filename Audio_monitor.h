@@ -8,7 +8,7 @@
 /// If not, some external interrupt timer needs to call its update_amplitude()
 /// method manually. This is because the MsTimer2 library only supports one
 /// interrupt at a time (and we have no time to switch libraries).
-//#define AUDIO_INTERNAL_INTERRUPT
+#define AUDIO_INTERNAL_INTERRUPT
 
 
 /// Singleton class that performs interrupt-driven sampling of the amplitude inputs from
@@ -18,7 +18,7 @@ class Audio_monitor
 {
 public:
   static const byte SAMPLE_INTERVAL = 30; // milliseconds
-  static const unsigned int MAX_AMPLITUDE = 1023; //the empirically measured max possible mic reading
+  static const uint16_t MAX_AMPLITUDE = 720; //the empirically measured max possible mic reading
   static const float SENSITIVITY_MULTIPLIER = 1; //inputs get multiplied by this
   
   /// minimum ms between true return values of is_anomolously_loud(). should be a multiple
@@ -34,8 +34,8 @@ public:
   /// Same as above but in the [0,1] range
   float get_amplitude_float() const { return (float)get_amplitude()/MAX_AMPLITUDE; }
 
-  /// Returns the average of the last AMP_SIZE averages of the amplitude array
-  /// (so timescale is AMP_SIZE^2)
+  /// Returns the average of the last SAMPLE_MEANS averages of the amplitude array
+  /// (so timescale is SAMPLES*SAMPLE_MEANS)
   int get_recent_amplitude_mean() const;
 
   /// Returns whether or not it is anomolously loud currently. "anomolously loud"
@@ -54,25 +54,28 @@ public:
   static void update_amplitude();
   
 private:
-  static const unsigned int AMP_SIZE = 50;
+  static const uint16_t SAMPLES = 20;
+  static const uint16_t SAMPLE_MEANS = 50;
   static const byte clockpin = 13;
   static const byte enablepin = 10;
   static const byte latchpin = 9;
   static const byte datapin = 11;
   static const byte audio_read_pin = 2;
   
-  unsigned int amplitudes[AMP_SIZE];
-  unsigned int recent_mean_amplitudes[AMP_SIZE]; // each number in here is the average of one full trip through the amplitudes array
+  // each number in here is the average of one set of SAMPLES.
+  // we have to cache all the values in order to calculate the standard deviation.
+  uint16_t recent_mean_amplitudes[SAMPLE_MEANS];
   static Audio_monitor singleton;
   byte amp_cnt, mean_amp_cnt;
-  long sum, mean_sum;
-  unsigned int amp;
-  unsigned int last_reading;
-  unsigned int stdev;
+  long sum; // decaying sum of last SAMPLES measures
+  long mean_sum; // simple sum of values in recent_mean_amplitudes
+  uint16_t amp;
+  uint16_t last_reading;
+  uint16_t stdev;
   bool initializing; // set to true after one full cycle through mean amplitudes array
   bool lock;
   bool serial_debug;
-  unsigned int debounce_counter; // used to ensure that is_anomolously_loud() doesn't return true too often
+  uint16_t debounce_counter; // used to ensure that is_anomolously_loud() doesn't return true too often
   
   /// Private so that no one can create additional instances
   Audio_monitor();
@@ -84,10 +87,10 @@ private:
   ~Audio_monitor();
 
   /// Adds new_value to the position in array given by counter, updates sum of array, updates counter
-  static void update_array_and_sum( unsigned int array[], const unsigned int array_size, long& sum, byte& counter, unsigned int new_value );
+  static void update_array_and_sum( uint16_t array[], const uint16_t array_size, long& sum, byte& counter, uint16_t new_value );
 
   /// Called by update_amplitude
-  void update( unsigned int latest_value );
+  void update( uint16_t latest_value );
 };
 
 
