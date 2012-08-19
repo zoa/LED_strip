@@ -23,7 +23,7 @@ public:
   
   /// minimum ms between true return values of is_anomolously_loud(). should be a multiple
   /// of sample_interval.
-  static const int DEBOUNCE_INTERVAL = 1000; 
+  static const unsigned long int DEBOUNCE_INTERVAL = 60000; 
 
   /// Gets the one static instance of the class
   static Audio_monitor& instance();
@@ -75,7 +75,7 @@ private:
   bool initializing; // set to true after one full cycle through mean amplitudes array
   bool lock;
   bool serial_debug;
-  uint16_t debounce_counter; // used to ensure that is_anomolously_loud() doesn't return true too often
+  unsigned long int debounce_counter; // used to ensure that is_anomolously_loud() doesn't return true too often
   
   /// Private so that no one can create additional instances
   Audio_monitor();
